@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VisionLab · Image Processing Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --surface2: #18181f;
+  --border: #2a2a38;
+  --accent: #7c6eff;
+  --accent2: #ff6e7c;
+  --accent3: #6effd4;
+  --text: #e8e8f0;
+  --muted: #6b6b80;
+  --success: #6effd4;
+  --warning: #ffd46e;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── NOISE TEXTURE ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* ─── HEADER ─── */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: 64px;
+}
+
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-top: -4px;
+}
+
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent3);
+  border: 1px solid rgba(110, 255, 212, 0.3);
+  padding: 4px 12px;
+  border-radius: 100px;
+  letter-spacing: 2px;
+}
+
+/* ─── GLOBAL IMAGE STRIP ─── */
+.global-images-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.85rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 64px;
+  z-index: 90;
+}
+
+.global-images-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.global-img-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--surface2);
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  padding: 0.45rem 0.85rem 0.45rem 0.55rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 180px;
+}
+
+.global-img-slot:hover { border-color: var(--accent); background: rgba(124,110,255,0.06); }
+.global-img-slot.loaded { border-style: solid; border-color: var(--accent3); }
+
+.global-img-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--border);
+  flex-shrink: 0;
+  display: block;
+}
+
+.global-img-thumb.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+}
+
+.global-img-info { flex: 1; min-width: 0; }
+.global-img-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.global-img-name {
+  font-size: 0.78rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+  margin-top: 1px;
+}
+.global-img-name.placeholder { color: var(--muted); font-style: italic; }
+
+.global-clear-btn {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255,110,124,0.18);
+  border: 1px solid rgba(255,110,124,0.4);
+  color: var(--accent2);
+  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: all 0.15s;
+}
+.global-clear-btn:hover { background: rgba(255,110,124,0.35); }
+
+input.global-file-input { display: none; }
+
+/* ─── LAYOUT ─── */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: calc(100vh - 64px - 69px);
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem 0;
+  overflow-y: auto;
+  position: sticky;
+  top: calc(64px + 69px);
+  height: calc(100vh - 64px - 69px);
+}
+
+.sidebar-section {
+  padding: 0.5rem 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.sidebar-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+  padding: 1rem 1.5rem 0.5rem;
+  display: block;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1.5rem;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.15s;
+  border-left: 2px solid transparent;
+  font-size: 0.875rem;
+  color: var(--muted);
+  position: relative;
+}
+
+.nav-item:hover {
+  color: var(--text);
+  background: rgba(124, 110, 255, 0.07);
+  border-left-color: var(--accent);
+}
+
+.nav-item.active {
+  color: var(--text);
+  background: rgba(124, 110, 255, 0.12);
+  border-left-color: var(--accent);
+}
+
+.nav-item .icon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.nav-item.active .icon { opacity: 1; }
+
+.nav-badge {
+  margin-left: auto;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ─── MAIN CONTENT ─── */
+.main {
+  padding: 2rem;
+  position: relative;
+}
+
+/* ─── TASK PANEL ─── */
+.task-panel {
+  display: none;
+  animation: fadeUp 0.3s ease;
+}
+
+.task-panel.active { display: block; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.task-header {
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.task-number {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3.5rem;
+  line-height: 1;
+  color: var(--border);
+  letter-spacing: 2px;
+  flex-shrink: 0;
+}
+
+.task-meta { flex: 1; }
+
+.task-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.35rem;
+}
+
+.task-desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ─── UPLOAD ZONES (now only used for arithmetic's 2nd image) ─── */
+.upload-row {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.upload-row.two { grid-template-columns: 1fr 1fr; }
+.upload-row.one { grid-template-columns: 1fr; max-width: 480px; }
+
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-zone:hover, .upload-zone.drag {
+  border-color: var(--accent);
+  background: rgba(124, 110, 255, 0.05);
+}
+
+.upload-zone.required::before {
+  content: 'REQUIRED';
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  color: var(--accent2);
+  border: 1px solid rgba(255, 110, 124, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.upload-zone.optional::before {
+  content: 'OPTIONAL';
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  color: var(--accent3);
+  border: 1px solid rgba(110, 255, 212, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.upload-icon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 0.75rem;
+  opacity: 0.4;
+}
+
+.upload-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.upload-label strong {
+  color: var(--text);
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.upload-preview {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.upload-preview.visible { opacity: 0.25; }
+
+input[type="file"] { display: none; }
+
+/* ─── GLOBAL IMAGE NOTICE ─── */
+.global-image-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(124,110,255,0.08);
+  border: 1px solid rgba(124,110,255,0.2);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.global-image-notice .notice-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+
+.global-image-notice .notice-text strong {
+  color: var(--accent3);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 1.5px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.no-image-warn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(255,110,124,0.07);
+  border: 1px solid rgba(255,110,124,0.25);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.82rem;
+  color: var(--accent2);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+/* ─── PARAMS ─── */
+.params-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.param-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 140px;
+}
+
+.param-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.param-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+.param-input:focus { border-color: var(--accent); }
+
+/* ─── RUN BUTTONS ─── */
+.run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem 2rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 2.5rem;
+  text-transform: uppercase;
+}
+
+.run-btn:hover { background: #6a5cee; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,110,255,0.3); }
+.run-btn:active { transform: translateY(0); }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.run-btn .spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: none;
+}
+
+.run-btn.loading .spinner { display: block; }
+.run-btn.loading .btn-text { opacity: 0.7; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── RESULTS ─── */
+.results-section {
+  display: none;
+}
+.results-section.visible { display: block; }
+
+/* Output section block */
+.output-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.output-block-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.output-block-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent3);
+  flex-shrink: 0;
+}
+
+.output-block-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.output-block-count {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--border);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.output-block-body {
+  padding: 1rem;
+}
+
+.results-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.result-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.result-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.result-card img {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  display: block;
+  background: var(--surface);
+}
+
+.result-card-label {
+  padding: 0.5rem 0.75rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.result-card-label .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent3);
+  flex-shrink: 0;
+}
+
+/* ─── HISTOGRAM CHART ─── */
+.hist-container {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.hist-canvas {
+  width: 100%;
+  height: 120px;
+}
+
+.hist-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+  letter-spacing: 1px;
+}
+
+/* ─── INFO BOX ─── */
+.info-box {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1.5rem;
+}
+
+.info-box.visible { display: grid; }
+
+.info-stat .stat-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  letter-spacing: 1px;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.info-stat .stat-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 0.25rem;
+}
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1.25rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--text);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 999;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { border-color: var(--accent2); color: var(--accent2); }
+.toast.success { border-color: var(--accent3); color: var(--accent3); }
+
+/* ─── DIVIDER ─── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 1.25rem 0;
+}
+
+/* ─── WELCOME ─── */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  gap: 1.5rem;
+}
+
+.welcome-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 5rem;
+  letter-spacing: 8px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.welcome-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 4px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.welcome-desc {
+  max-width: 420px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.welcome-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.welcome-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: relative; height: auto; top: 0; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">VisionLab</div>
+    <div class="logo-sub">Image Processing Studio</div>
+  </div>
+  <div class="header-right">
+    <span class="pill">CV · 18 OPS</span>
+  </div>
+</header>
+
+<!-- ─── GLOBAL IMAGE BAR ─── -->
+<div class="global-images-bar">
+  <span class="global-images-label">Images</span>
+
+  <!-- Image 1 slot -->
+  <div class="global-img-slot" id="gslot-1" onclick="document.getElementById('g-file-1').click()">
+    <span class="global-img-thumb empty" id="gthumb-1">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="opacity:0.35"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+    </span>
+    <div class="global-img-info">
+      <div class="global-img-title">Image 1</div>
+      <div class="global-img-name placeholder" id="gname-1">Click to upload</div>
+    </div>
+    <span class="global-clear-btn" id="gclear-1" style="display:none" onclick="clearGlobal(event,1)">✕</span>
+  </div>
+  <input class="global-file-input" type="file" id="g-file-1" accept="image/*" onchange="setGlobalImage(1,this)">
+
+  <!-- Image 2 slot -->
+  <div class="global-img-slot" id="gslot-2" onclick="document.getElementById('g-file-2').click()">
+    <span class="global-img-thumb empty" id="gthumb-2">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="opacity:0.35"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+    </span>
+    <div class="global-img-info">
+      <div class="global-img-title">Image 2</div>
+      <div class="global-img-name placeholder" id="gname-2">Optional (Arithmetic)</div>
+    </div>
+    <span class="global-clear-btn" id="gclear-2" style="display:none" onclick="clearGlobal(event,2)">✕</span>
+  </div>
+  <input class="global-file-input" type="file" id="g-file-2" accept="image/*" onchange="setGlobalImage(2,this)">
+</div>
+
+<div class="layout">
+
+<!-- ─── SIDEBAR ─── -->
+<aside class="sidebar">
+
+  <span class="sidebar-label">Basics</span>
+  <div class="nav-item" onclick="show('info')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.02M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+    Image Info
+    <span class="nav-badge">01</span>
+  </div>
+  <div class="nav-item" onclick="show('complement')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+    Complement
+    <span class="nav-badge">02</span>
+  </div>
+  <div class="nav-item" onclick="show('channels')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42"/></svg>
+    RGB Channels
+    <span class="nav-badge">03</span>
+  </div>
+  <div class="nav-item" onclick="show('color_ops')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88"/></svg>
+    Color Operations
+    <span class="nav-badge">04</span>
+  </div>
+  <div class="nav-item" onclick="show('roi')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
+    ROI Extraction
+    <span class="nav-badge">05</span>
+  </div>
+
+  <span class="sidebar-label">Math &amp; Logic</span>
+  <div class="nav-item" onclick="show('arithmetic')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V13.5zm0 2.25h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V18zm2.498-6.75h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V13.5zm0 2.25h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V18zm2.504-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zm0 2.25h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V18zm2.498-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zM8.25 6h7.5v2.25h-7.5V6zM12 2.25c-1.892 0-3.758.11-5.593.322C5.307 2.7 4.5 3.65 4.5 4.757V19.5a2.25 2.25 0 002.25 2.25h10.5a2.25 2.25 0 002.25-2.25V4.757c0-1.108-.806-2.057-1.907-2.185A48.507 48.507 0 0012 2.25z"/></svg>
+    Arithmetic &amp; Logical
+    <span class="nav-badge">06</span>
+  </div>
+
+  <span class="sidebar-label">Enhancement</span>
+  <div class="nav-item" onclick="show('histogram')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+    Histogram
+    <span class="nav-badge">07</span>
+  </div>
+  <div class="nav-item" onclick="show('gamma')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+    Gamma Correction
+    <span class="nav-badge">08</span>
+  </div>
+  <div class="nav-item" onclick="show('hist_enhance')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"/></svg>
+    Hist. Stretch &amp; Eq.
+    <span class="nav-badge">09</span>
+  </div>
+
+  <span class="sidebar-label">Filters</span>
+  <div class="nav-item" onclick="show('filters')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 13.5V3.75m0 9.75a1.5 1.5 0 010 3m0-3a1.5 1.5 0 000 3m0 3.75V16.5m12-3V3.75m0 9.75a1.5 1.5 0 010 3m0-3a1.5 1.5 0 000 3m0 3.75V16.5m-6-9V3.75m0 3.75a1.5 1.5 0 010 3m0-3a1.5 1.5 0 000 3m0 9.75V10.5"/></svg>
+    Spatial Filters
+    <span class="nav-badge">10</span>
+  </div>
+
+  <span class="sidebar-label">Noise</span>
+  <div class="nav-item" onclick="show('gaussian_noise')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z"/></svg>
+    Gaussian Noise
+    <span class="nav-badge">11</span>
+  </div>
+  <div class="nav-item" onclick="show('averaging')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h-.75A2.25 2.25 0 004.5 9.75v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-7.5a2.25 2.25 0 00-2.25-2.25h-.75m-6 3.75l3 3m0 0l3-3m-3 3V1.5m6 9h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25h-7.5a2.25 2.25 0 01-2.25-2.25v-.75"/></svg>
+    Image Averaging
+    <span class="nav-badge">12</span>
+  </div>
+  <div class="nav-item" onclick="show('periodic_noise')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+    Periodic Noise
+    <span class="nav-badge">13</span>
+  </div>
+  <div class="nav-item" onclick="show('salt_pepper')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79"/></svg>
+    Salt &amp; Pepper
+    <span class="nav-badge">14</span>
+  </div>
+  <div class="nav-item" onclick="show('outlier')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/></svg>
+    Outlier Method
+    <span class="nav-badge">15</span>
+  </div>
+
+  <span class="sidebar-label">Color Space</span>
+  <div class="nav-item" onclick="show('hsi')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88"/></svg>
+    RGB → HSI
+    <span class="nav-badge">16</span>
+  </div>
+
+  <span class="sidebar-label">Morphology &amp; Edges</span>
+  <div class="nav-item" onclick="show('morphology')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
+    Morphology
+    <span class="nav-badge">17</span>
+  </div>
+  <div class="nav-item" onclick="show('edges')">
+    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/></svg>
+    Edge Detection
+    <span class="nav-badge">18</span>
+  </div>
+
+</aside>
+
+<!-- ─── MAIN ─── -->
+<main class="main">
+
+  <!-- Welcome -->
+  <div id="panel-welcome" class="task-panel active">
+    <div class="welcome">
+      <div>
+        <div class="welcome-logo">Vision<br>Lab</div>
+        <div class="welcome-sub" style="margin-top:1rem">Image Processing Studio</div>
+      </div>
+      <p class="welcome-desc">Select any operation from the sidebar to begin. Upload an image and explore classic computer vision algorithms — visually and interactively.</p>
+      <div class="welcome-grid">
+        <div class="welcome-chip">18 Operations</div>
+        <div class="welcome-chip">Real-time</div>
+        <div class="welcome-chip">Side-by-side</div>
+        <div class="welcome-chip">OpenCV Backend</div>
+        <div class="welcome-chip">No Watermarks</div>
+        <div class="welcome-chip">HD Export</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 01: INFO ── -->
+  <div id="panel-info" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">01</div>
+      <div class="task-meta">
+        <div class="task-title">Image Information</div>
+        <div class="task-desc">Extract basic metadata from the image: dimensions, channels count, and a quick preview.</div>
+      </div>
+    </div>
+    <div id="notice-info"></div>
+    <div class="info-box" id="info-stats">
+      <div class="info-stat"><div class="stat-value" id="stat-w">—</div><div class="stat-label">Width (px)</div></div>
+      <div class="info-stat"><div class="stat-value" id="stat-h">—</div><div class="stat-label">Height (px)</div></div>
+      <div class="info-stat"><div class="stat-value" id="stat-c">—</div><div class="stat-label">Channels</div></div>
+    </div>
+    <button class="run-btn" onclick="runInfo()"><span class="spinner"></span><span class="btn-text">▶ ANALYZE IMAGE</span></button>
+    <div class="results-section" id="res-info">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Image Preview</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-info"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 02: COMPLEMENT ── -->
+  <div id="panel-complement" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">02</div>
+      <div class="task-meta">
+        <div class="task-title">Image Complement</div>
+        <div class="task-desc">Inverts each pixel value using <code style="color:var(--accent);font-family:'DM Mono',monospace">255 - pixel</code>. Produces a negative of the image.</div>
+      </div>
+    </div>
+    <div id="notice-complement"></div>
+    <button class="run-btn" onclick="runGlobalTask('complement',{},'res-comp','grid-comp')"><span class="spinner"></span><span class="btn-text">▶ APPLY COMPLEMENT</span></button>
+    <div class="results-section" id="res-comp">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Original vs Complement</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-comp"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 03: CHANNELS ── -->
+  <div id="panel-channels" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">03</div>
+      <div class="task-meta">
+        <div class="task-title">RGB Channels</div>
+        <div class="task-desc">Split the image into its Blue, Green, and Red color channels for individual analysis.</div>
+      </div>
+    </div>
+    <div id="notice-channels"></div>
+    <button class="run-btn" onclick="runGlobalTask('channels',{},'res-ch','grid-ch')"><span class="spinner"></span><span class="btn-text">▶ SPLIT CHANNELS</span></button>
+    <div class="results-section" id="res-ch">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">RGB Channel Separation</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-ch"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 04: COLOR OPS ── -->
+  <div id="panel-color_ops" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">04</div>
+      <div class="task-meta">
+        <div class="task-title">Color Operations</div>
+        <div class="task-desc">Boost Red channel (+50), swap R↔G channels, and zero out the Red channel — three distinct color manipulations.</div>
+      </div>
+    </div>
+    <div id="notice-color_ops"></div>
+    <button class="run-btn" onclick="runGlobalTask('color_ops',{},'res-col','grid-col')"><span class="spinner"></span><span class="btn-text">▶ APPLY COLOR OPS</span></button>
+    <div class="results-section" id="res-col">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Color Manipulation Results</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-col"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 05: ROI ── -->
+  <div id="panel-roi" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">05</div>
+      <div class="task-meta">
+        <div class="task-title">Region of Interest</div>
+        <div class="task-desc">Crop a rectangular region from the image. Adjust X, Y, Width, and Height to define the region.</div>
+      </div>
+    </div>
+    <div id="notice-roi"></div>
+    <div class="params-row">
+      <div class="param-group"><label class="param-label">X</label><input type="number" id="roi-x" class="param-input" value="100" min="0"></div>
+      <div class="param-group"><label class="param-label">Y</label><input type="number" id="roi-y" class="param-input" value="100" min="0"></div>
+      <div class="param-group"><label class="param-label">Width</label><input type="number" id="roi-w" class="param-input" value="200" min="10"></div>
+      <div class="param-group"><label class="param-label">Height</label><input type="number" id="roi-h" class="param-input" value="200" min="10"></div>
+    </div>
+    <button class="run-btn" onclick="runROI()"><span class="spinner"></span><span class="btn-text">▶ EXTRACT ROI</span></button>
+    <div class="results-section" id="res-roi">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">ROI Extraction</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-roi"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 06: ARITHMETIC ── -->
+  <div id="panel-arithmetic" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">06</div>
+      <div class="task-meta">
+        <div class="task-title">Arithmetic &amp; Logical Operations</div>
+        <div class="task-desc">Add, subtract, multiply, divide — plus AND, OR, XOR bitwise operations between two images. Second image is optional; a blank image is used if not provided.</div>
+      </div>
+    </div>
+    <div id="notice-arithmetic"></div>
+    <button class="run-btn" onclick="runArithmetic()"><span class="spinner"></span><span class="btn-text">▶ RUN ALL OPERATIONS</span></button>
+    <div class="results-section" id="res-ar">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Source Images</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-ar-src"></div></div>
+      </div>
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot" style="background:var(--warning)"></span><span class="output-block-title">Arithmetic Operations</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-ar-math"></div></div>
+      </div>
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot" style="background:var(--accent2)"></span><span class="output-block-title">Bitwise Operations</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-ar-bit"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 07: HISTOGRAM ── -->
+  <div id="panel-histogram" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">07</div>
+      <div class="task-meta">
+        <div class="task-title">Grayscale &amp; Histogram</div>
+        <div class="task-desc">Convert to grayscale and display the pixel intensity distribution as an interactive histogram chart.</div>
+      </div>
+    </div>
+    <div id="notice-histogram"></div>
+    <button class="run-btn" onclick="runHistogram()"><span class="spinner"></span><span class="btn-text">▶ COMPUTE HISTOGRAM</span></button>
+    <div class="results-section" id="res-hist">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Grayscale Conversion</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-hist"></div></div>
+      </div>
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot" style="background:var(--accent)"></span><span class="output-block-title">Intensity Distribution Chart</span></div>
+        <div class="output-block-body">
+          <div class="hist-container">
+            <div class="hist-label">PIXEL INTENSITY HISTOGRAM</div>
+            <canvas id="hist-canvas" class="hist-canvas" height="120"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 08: GAMMA ── -->
+  <div id="panel-gamma" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">08</div>
+      <div class="task-meta">
+        <div class="task-title">Gamma Correction</div>
+        <div class="task-desc">Apply power-law transformation: <code style="color:var(--accent);font-family:'DM Mono',monospace">output = (input/255)^γ × 255</code>. γ &lt; 1 brightens, γ &gt; 1 darkens.</div>
+      </div>
+    </div>
+    <div id="notice-gamma"></div>
+    <div class="params-row">
+      <div class="param-group"><label class="param-label">Gamma (γ)</label><input type="number" id="gam-val" class="param-input" value="2.0" min="0.1" max="10" step="0.1"></div>
+    </div>
+    <button class="run-btn" onclick="runGamma()"><span class="spinner"></span><span class="btn-text">▶ APPLY GAMMA CORRECTION</span></button>
+    <div class="results-section" id="res-gam">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Gamma Correction Result</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-gam"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 09: HIST ENHANCE ── -->
+  <div id="panel-hist_enhance" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">09</div>
+      <div class="task-meta">
+        <div class="task-title">Histogram Stretching &amp; Equalization</div>
+        <div class="task-desc">Stretching maps pixel range [min,max] → [0,255]. Equalization redistributes intensity for uniform histogram.</div>
+      </div>
+    </div>
+    <div id="notice-hist_enhance"></div>
+    <button class="run-btn" onclick="runHistEnhance()"><span class="spinner"></span><span class="btn-text">▶ STRETCH &amp; EQUALIZE</span></button>
+    <div class="results-section" id="res-he">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Enhanced Images</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-he"></div></div>
+      </div>
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot" style="background:var(--accent)"></span><span class="output-block-title">Histogram Comparison</span></div>
+        <div class="output-block-body">
+          <div style="display:grid;gap:0.85rem;grid-template-columns:1fr 1fr 1fr">
+            <div class="hist-container"><div class="hist-label">ORIGINAL</div><canvas id="he-hist-orig" height="100"></canvas></div>
+            <div class="hist-container"><div class="hist-label">STRETCHED</div><canvas id="he-hist-str" height="100"></canvas></div>
+            <div class="hist-container"><div class="hist-label">EQUALIZED</div><canvas id="he-hist-eq" height="100"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 10: FILTERS ── -->
+  <div id="panel-filters" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">10</div>
+      <div class="task-meta">
+        <div class="task-title">Spatial Filters</div>
+        <div class="task-desc">Average, Median, Rank-Order, Max (Dilation), Min (Erosion), and Mode filters applied to the image.</div>
+      </div>
+    </div>
+    <div id="notice-filters"></div>
+    <button class="run-btn" onclick="runGlobalTask('filters',{},'res-filt','grid-filt')"><span class="spinner"></span><span class="btn-text">▶ APPLY ALL FILTERS</span></button>
+    <div class="results-section" id="res-filt">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Filter Results</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-filt"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 11: GAUSSIAN NOISE ── -->
+  <div id="panel-gaussian_noise" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">11</div>
+      <div class="task-meta">
+        <div class="task-title">Gaussian Noise</div>
+        <div class="task-desc">Add Gaussian noise (mean=0, configurable sigma) then remove with a Gaussian blur filter.</div>
+      </div>
+    </div>
+    <div id="notice-gaussian_noise"></div>
+    <div class="params-row">
+      <div class="param-group"><label class="param-label">Sigma (σ)</label><input type="number" id="gn-sigma" class="param-input" value="25" min="1" max="100"></div>
+    </div>
+    <button class="run-btn" onclick="runGaussianNoise()"><span class="spinner"></span><span class="btn-text">▶ ADD &amp; REMOVE GAUSSIAN NOISE</span></button>
+    <div class="results-section" id="res-gn">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Gaussian Noise Pipeline</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-gn"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 12: AVERAGING ── -->
+  <div id="panel-averaging" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">12</div>
+      <div class="task-meta">
+        <div class="task-title">Image Averaging</div>
+        <div class="task-desc">Generate 5 noisy copies of the image, then average them. Demonstrates how averaging reduces random noise.</div>
+      </div>
+    </div>
+    <div id="notice-averaging"></div>
+    <button class="run-btn" onclick="runGlobalTask('averaging',{},'res-avg','grid-avg')"><span class="spinner"></span><span class="btn-text">▶ AVERAGE 5 FRAMES</span></button>
+    <div class="results-section" id="res-avg">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Noise Reduction via Averaging</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-avg"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 13: PERIODIC NOISE ── -->
+  <div id="panel-periodic_noise" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">13</div>
+      <div class="task-meta">
+        <div class="task-title">Periodic Noise</div>
+        <div class="task-desc">Add sinusoidal periodic noise then remove it with an average filter. Adjust frequency and amplitude.</div>
+      </div>
+    </div>
+    <div id="notice-periodic_noise"></div>
+    <div class="params-row">
+      <div class="param-group"><label class="param-label">Frequency</label><input type="number" id="pn-freq" class="param-input" value="30" min="5" max="100"></div>
+      <div class="param-group"><label class="param-label">Amplitude</label><input type="number" id="pn-amp" class="param-input" value="50" min="5" max="127"></div>
+    </div>
+    <button class="run-btn" onclick="runPeriodicNoise()"><span class="spinner"></span><span class="btn-text">▶ ADD &amp; REMOVE PERIODIC NOISE</span></button>
+    <div class="results-section" id="res-pn">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Periodic Noise Pipeline</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-pn"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 14: SALT & PEPPER ── -->
+  <div id="panel-salt_pepper" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">14</div>
+      <div class="task-meta">
+        <div class="task-title">Salt &amp; Pepper Noise</div>
+        <div class="task-desc">Add random black/white pixel noise and remove it with a median filter. Adjust noise probability.</div>
+      </div>
+    </div>
+    <div id="notice-salt_pepper"></div>
+    <div class="params-row">
+      <div class="param-group"><label class="param-label">Probability</label><input type="number" id="sp-prob" class="param-input" value="0.004" min="0.001" max="0.1" step="0.001"></div>
+    </div>
+    <button class="run-btn" onclick="runSaltPepper()"><span class="spinner"></span><span class="btn-text">▶ ADD &amp; REMOVE SALT &amp; PEPPER</span></button>
+    <div class="results-section" id="res-sp">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Salt &amp; Pepper Noise Pipeline</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-sp"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 15: OUTLIER ── -->
+  <div id="panel-outlier" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">15</div>
+      <div class="task-meta">
+        <div class="task-title">Outlier Method</div>
+        <div class="task-desc">Detects pixels that deviate from their neighbourhood average beyond a threshold, and replaces them with the average value.</div>
+      </div>
+    </div>
+    <div id="notice-outlier"></div>
+    <div class="params-row">
+      <div class="param-group"><label class="param-label">Threshold</label><input type="number" id="out-thresh" class="param-input" value="40" min="1" max="200"></div>
+    </div>
+    <button class="run-btn" onclick="runOutlier()"><span class="spinner"></span><span class="btn-text">▶ APPLY OUTLIER FILTER</span></button>
+    <div class="results-section" id="res-out">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Outlier Detection &amp; Removal</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-out"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 16: HSI ── -->
+  <div id="panel-hsi" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">16</div>
+      <div class="task-meta">
+        <div class="task-title">RGB → HSI Conversion</div>
+        <div class="task-desc">Convert RGB to Hue, Saturation, and Intensity components. Also shows the OpenCV HSV representation.</div>
+      </div>
+    </div>
+    <div id="notice-hsi"></div>
+    <button class="run-btn" onclick="runGlobalTask('hsi',{},'res-hsi','grid-hsi')"><span class="spinner"></span><span class="btn-text">▶ CONVERT TO HSI</span></button>
+    <div class="results-section" id="res-hsi">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">HSI Components</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-hsi"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 17: MORPHOLOGY ── -->
+  <div id="panel-morphology" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">17</div>
+      <div class="task-meta">
+        <div class="task-title">Morphological Operations</div>
+        <div class="task-desc">Erosion, Dilation, Opening, Closing, Internal/External Boundary, and Morphological Gradient on binary image.</div>
+      </div>
+    </div>
+    <div id="notice-morphology"></div>
+    <button class="run-btn" onclick="runGlobalTask('morphology',{},'res-morph','grid-morph')"><span class="spinner"></span><span class="btn-text">▶ APPLY MORPHOLOGY</span></button>
+    <div class="results-section" id="res-morph">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Morphological Operation Results</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-morph"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TASK 18: EDGES ── -->
+  <div id="panel-edges" class="task-panel">
+    <div class="task-header">
+      <div class="task-number">18</div>
+      <div class="task-meta">
+        <div class="task-title">Edge Detection</div>
+        <div class="task-desc">Apply Sobel, Prewitt, Roberts Cross, and Laplacian edge detectors — all four compared side by side.</div>
+      </div>
+    </div>
+    <div id="notice-edges"></div>
+    <button class="run-btn" onclick="runGlobalTask('edges',{},'res-edge','grid-edge')"><span class="spinner"></span><span class="btn-text">▶ DETECT EDGES</span></button>
+    <div class="results-section" id="res-edge">
+      <div class="output-block">
+        <div class="output-block-header"><span class="output-block-dot"></span><span class="output-block-title">Edge Detector Comparison</span></div>
+        <div class="output-block-body"><div class="results-grid" id="grid-edge"></div></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── GLOBAL IMAGE STATE ─────────────────────────────
+const globalImages = { 1: null, 2: null };
+
+function setGlobalImage(slot, input) {
+  const file = input.files[0];
+  if (!file) return;
+  globalImages[slot] = file;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const slot_el = document.getElementById('gslot-' + slot);
+    const thumb_el = document.getElementById('gthumb-' + slot);
+    const name_el = document.getElementById('gname-' + slot);
+    const clear_el = document.getElementById('gclear-' + slot);
+
+    // Replace the empty span with an actual img
+    const img = document.createElement('img');
+    img.className = 'global-img-thumb';
+    img.src = e.target.result;
+    thumb_el.replaceWith(img);
+
+    name_el.textContent = file.name.length > 18 ? file.name.substring(0,15)+'…' : file.name;
+    name_el.classList.remove('placeholder');
+    clear_el.style.display = 'flex';
+    slot_el.classList.add('loaded');
+  };
+  reader.readAsDataURL(file);
+  refreshAllNotices();
+}
+
+function clearGlobal(e, slot) {
+  e.stopPropagation();
+  globalImages[slot] = null;
+
+  const slot_el = document.getElementById('gslot-' + slot);
+  const thumb_old = slot_el.querySelector('img.global-img-thumb');
+  const name_el = document.getElementById('gname-' + slot);
+  const clear_el = document.getElementById('gclear-' + slot);
+  const fileInput = document.getElementById('g-file-' + slot);
+
+  if (thumb_old) {
+    const span = document.createElement('span');
+    span.className = 'global-img-thumb empty';
+    span.id = 'gthumb-' + slot;
+    span.innerHTML = slot === 1
+      ? `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="opacity:0.35"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>`
+      : `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="opacity:0.35"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>`;
+    thumb_old.replaceWith(span);
+  }
+
+  name_el.textContent = slot === 1 ? 'Click to upload' : 'Optional (Arithmetic)';
+  name_el.classList.add('placeholder');
+  clear_el.style.display = 'none';
+  slot_el.classList.remove('loaded');
+  fileInput.value = '';
+  refreshAllNotices();
+}
+
+function refreshAllNotices() {
+  const panelIds = ['info','complement','channels','color_ops','roi','arithmetic',
+    'histogram','gamma','hist_enhance','filters','gaussian_noise','averaging',
+    'periodic_noise','salt_pepper','outlier','hsi','morphology','edges'];
+  panelIds.forEach(id => renderNotice(id));
+}
+
+function renderNotice(panelId) {
+  const noticeEl = document.getElementById('notice-' + panelId);
+  if (!noticeEl) return;
+
+  if (panelId === 'arithmetic') {
+    // Arithmetic needs image1; image2 is optional
+    if (!globalImages[1]) {
+      noticeEl.innerHTML = `<div class="no-image-warn">⚠ UPLOAD IMAGE 1 IN THE BAR ABOVE TO RUN THIS OPERATION</div>`;
+    } else {
+      const img2note = globalImages[2] ? `· Image 2: <strong style="color:var(--accent3)">${globalImages[2].name}</strong>` : `· Image 2: <em>not set — a gray blank will be used</em>`;
+      noticeEl.innerHTML = `<div class="global-image-notice">
+        <img class="notice-img" src="${URL.createObjectURL(globalImages[1])}" alt="">
+        <div class="notice-text">
+          <strong>IMAGES LOADED</strong>
+          Image 1: <strong style="color:var(--accent3)">${globalImages[1].name}</strong> ${img2note}
+        </div>
+      </div>`;
+    }
+    return;
+  }
+
+  if (!globalImages[1]) {
+    noticeEl.innerHTML = `<div class="no-image-warn">⚠ UPLOAD IMAGE 1 IN THE BAR ABOVE TO RUN THIS OPERATION</div>`;
+  } else {
+    noticeEl.innerHTML = `<div class="global-image-notice">
+      <img class="notice-img" src="${URL.createObjectURL(globalImages[1])}" alt="">
+      <div class="notice-text">
+        <strong>IMAGE LOADED</strong>
+        ${globalImages[1].name}
+      </div>
+    </div>`;
+  }
+}
+
+// ─── NAVIGATION ─────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.task-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  renderNotice(id);
+}
+
+// ─── HELPERS ────────────────────────────────────────
+function setLoading(btn, on) {
+  btn.disabled = on;
+  btn.classList.toggle('loading', on);
+}
+
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function card(label, b64) {
+  return `<div class="result-card">
+    <img src="data:image/png;base64,${b64}" alt="${label}">
+    <div class="result-card-label"><span>${label}</span><span class="dot"></span></div>
+  </div>`;
+}
+
+function showResults(resId) {
+  document.getElementById(resId).classList.add('visible');
+}
+
+// ─── GENERIC GLOBAL TASK RUNNER ─────────────────────
+async function runGlobalTask(endpoint, extraFields, resId, gridId) {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData();
+  fd.append('image', globalImages[1]);
+  for (const [k, v] of Object.entries(extraFields)) fd.append(k, v);
+
+  setLoading(btn, true);
+  try {
+    const r = await fetch('/api/' + endpoint, { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.error) { toast(d.error, 'error'); return; }
+    const labels = {
+      original:'Original', result:'Result',
+      blue:'Blue Channel', green:'Green Channel', red:'Red Channel',
+      red_boost:'Red Boosted (+50)', swap_rg:'R ↔ G Swapped', no_red:'Red Removed',
+      average:'Average Filter', median:'Median Filter', rank_order:'Rank-Order',
+      max_filter:'Max (Dilation)', min_filter:'Min (Erosion)', mode_filter:'Mode Filter',
+      noisy_sample:'Noisy Sample', averaged:'Averaged (5 frames)', gray:'Grayscale',
+      hue:'Hue (H)', saturation:'Saturation (S)', intensity:'Intensity (I)', hsv:'HSV (OpenCV)',
+      erosion:'Erosion', dilation:'Dilation', opening:'Opening', closing:'Closing',
+      internal:'Internal Boundary', external:'External Boundary', gradient:'Morph. Gradient',
+      sobel:'Sobel', prewitt:'Prewitt', robert:'Roberts Cross', laplacian:'Laplacian',
+      complement:'Complement',
+    };
+    let html = '';
+    for (const [k, v] of Object.entries(d)) {
+      if (typeof v === 'string' && v.length > 10) html += card(labels[k] || k, v);
+    }
+    document.getElementById(gridId).innerHTML = html;
+    showResults(resId);
+    toast('Done!', 'success');
+  } catch(e) { toast('Request failed: ' + e.message, 'error'); }
+  finally { setLoading(btn, false); }
+}
+
+// ─── SPECIFIC RUNNERS ────────────────────────────────
+async function runInfo() {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData(); fd.append('image', globalImages[1]);
+  setLoading(btn, true);
+  try {
+    const r = await fetch('/api/info', { method:'POST', body:fd });
+    const d = await r.json();
+    if (d.error) { toast(d.error,'error'); return; }
+    document.getElementById('stat-w').textContent = d.width;
+    document.getElementById('stat-h').textContent = d.height;
+    document.getElementById('stat-c').textContent = d.channels;
+    document.getElementById('info-stats').classList.add('visible');
+    document.getElementById('grid-info').innerHTML = card('Preview', d.preview);
+    showResults('res-info');
+    toast('Done!','success');
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { setLoading(btn,false); }
+}
+
+async function runROI() {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData();
+  fd.append('image', globalImages[1]);
+  fd.append('x', document.getElementById('roi-x').value);
+  fd.append('y', document.getElementById('roi-y').value);
+  fd.append('w', document.getElementById('roi-w').value);
+  fd.append('h', document.getElementById('roi-h').value);
+  setLoading(btn,true);
+  try {
+    const r = await fetch('/api/roi',{method:'POST',body:fd});
+    const d = await r.json();
+    if (d.error){toast(d.error,'error');return;}
+    document.getElementById('grid-roi').innerHTML = card('With ROI Marked',d.original)+card('Extracted Region',d.result);
+    showResults('res-roi');
+    toast('Done!','success');
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{setLoading(btn,false);}
+}
+
+async function runArithmetic() {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData();
+  fd.append('image', globalImages[1]);
+  if (globalImages[2]) {
+    fd.append('image2', globalImages[2]);
+  } else {
+    const img = new Image();
+    const url = URL.createObjectURL(globalImages[1]);
+    img.src = url;
+    await new Promise(res => img.onload = res);
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#808080'; ctx.fillRect(0,0,c.width,c.height);
+    const blob = await new Promise(res => c.toBlob(res,'image/png'));
+    fd.append('image2', blob, 'blank.png');
+    URL.revokeObjectURL(url);
+  }
+  setLoading(btn,true);
+  try {
+    const r = await fetch('/api/arithmetic',{method:'POST',body:fd});
+    const d = await r.json();
+    if(d.error){toast(d.error,'error');return;}
+    document.getElementById('grid-ar-src').innerHTML = card('Image 1',d.original)+card('Image 2',d.image2);
+    document.getElementById('grid-ar-math').innerHTML = card('Add',d.add)+card('Subtract',d.subtract)+card('Multiply',d.multiply)+card('Divide',d.divide);
+    document.getElementById('grid-ar-bit').innerHTML = card('AND',d.bitwise_and)+card('OR',d.bitwise_or)+card('XOR',d.bitwise_xor);
+    showResults('res-ar');
+    toast('Done!','success');
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{setLoading(btn,false);}
+}
+
+function drawHist(canvasId, data, color='rgba(124,110,255,0.8)') {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.clientWidth || 400;
+  const W = canvas.width, H = canvas.height;
+  const max = Math.max(...data);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = color;
+  const bw = W / 256;
+  for(let i=0;i<256;i++){
+    const h = (data[i]/max)*H;
+    ctx.fillRect(i*bw, H-h, bw, h);
+  }
+}
+
+async function runHistogram() {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData(); fd.append('image', globalImages[1]);
+  setLoading(btn,true);
+  try {
+    const r = await fetch('/api/histogram',{method:'POST',body:fd});
+    const d = await r.json();
+    if(d.error){toast(d.error,'error');return;}
+    document.getElementById('grid-hist').innerHTML = card('Original',d.original)+card('Grayscale',d.gray);
+    showResults('res-hist');
+    setTimeout(()=>drawHist('hist-canvas',d.histogram),100);
+    toast('Done!','success');
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{setLoading(btn,false);}
+}
+
+async function runGamma() {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData(); fd.append('image', globalImages[1]); fd.append('gamma',document.getElementById('gam-val').value);
+  setLoading(btn,true);
+  try {
+    const r = await fetch('/api/gamma',{method:'POST',body:fd});
+    const d = await r.json();
+    if(d.error){toast(d.error,'error');return;}
+    document.getElementById('grid-gam').innerHTML = card('Original (Grayscale)',d.original)+card(`Gamma γ=${d.gamma}`,d.result);
+    showResults('res-gam');
+    toast('Done!','success');
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{setLoading(btn,false);}
+}
+
+async function runHistEnhance() {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData(); fd.append('image', globalImages[1]);
+  setLoading(btn,true);
+  try {
+    const r = await fetch('/api/hist_enhance',{method:'POST',body:fd});
+    const d = await r.json();
+    if(d.error){toast(d.error,'error');return;}
+    document.getElementById('grid-he').innerHTML =
+      card('Original',d.original)+card(`Stretched [${d.min_val}–${d.max_val}]→[0–255]`,d.stretched)+card('Equalized',d.equalized);
+    showResults('res-he');
+    setTimeout(()=>{
+      drawHist('he-hist-orig',d.orig_hist,'rgba(124,110,255,0.8)');
+      drawHist('he-hist-str',d.str_hist,'rgba(110,255,212,0.8)');
+      drawHist('he-hist-eq',d.eq_hist,'rgba(255,110,124,0.8)');
+    },100);
+    toast('Done!','success');
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{setLoading(btn,false);}
+}
+
+async function runGaussianNoise() {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData(); fd.append('image', globalImages[1]); fd.append('sigma',document.getElementById('gn-sigma').value);
+  setLoading(btn,true);
+  try {
+    const r = await fetch('/api/gaussian_noise',{method:'POST',body:fd});
+    const d = await r.json();
+    if(d.error){toast(d.error,'error');return;}
+    document.getElementById('grid-gn').innerHTML =
+      card('Original',d.original)+card(`Gaussian Noise (σ=${d.sigma})`,d.noisy)+card('Noise Removed',d.removed);
+    showResults('res-gn');
+    toast('Done!','success');
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{setLoading(btn,false);}
+}
+
+async function runPeriodicNoise() {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData();
+  fd.append('image', globalImages[1]);
+  fd.append('freq',document.getElementById('pn-freq').value);
+  fd.append('amp',document.getElementById('pn-amp').value);
+  setLoading(btn,true);
+  try {
+    const r = await fetch('/api/periodic_noise',{method:'POST',body:fd});
+    const d = await r.json();
+    if(d.error){toast(d.error,'error');return;}
+    document.getElementById('grid-pn').innerHTML =
+      card('Original',d.original)+card(`Periodic Noise (f=${d.freq}, A=${d.amp})`,d.noisy)+card('Noise Removed',d.removed);
+    showResults('res-pn');
+    toast('Done!','success');
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{setLoading(btn,false);}
+}
+
+async function runSaltPepper() {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData(); fd.append('image', globalImages[1]); fd.append('prob',document.getElementById('sp-prob').value);
+  setLoading(btn,true);
+  try {
+    const r = await fetch('/api/salt_pepper',{method:'POST',body:fd});
+    const d = await r.json();
+    if(d.error){toast(d.error,'error');return;}
+    document.getElementById('grid-sp').innerHTML =
+      card('Original',d.original)+card(`Salt & Pepper (p=${d.prob})`,d.noisy)+card('Median Filter Removed',d.removed);
+    showResults('res-sp');
+    toast('Done!','success');
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{setLoading(btn,false);}
+}
+
+async function runOutlier() {
+  const btn = event.currentTarget;
+  if (!globalImages[1]) { toast('Upload Image 1 in the bar above first', 'error'); return; }
+  const fd = new FormData(); fd.append('image', globalImages[1]); fd.append('threshold',document.getElementById('out-thresh').value);
+  setLoading(btn,true);
+  try {
+    const r = await fetch('/api/outlier',{method:'POST',body:fd});
+    const d = await r.json();
+    if(d.error){toast(d.error,'error');return;}
+    document.getElementById('grid-out').innerHTML =
+      card('Original',d.original)+card(`Diff Map (thresh=${d.threshold})`,d.diff)+card('Filtered Result',d.result);
+    showResults('res-out');
+    toast('Done!','success');
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{setLoading(btn,false);}
+}
+
+// Drag & drop on global slots
+['gslot-1','gslot-2'].forEach((slotId, idx) => {
+  const slot = document.getElementById(slotId);
+  const fileInput = document.getElementById('g-file-' + (idx+1));
+  slot.addEventListener('dragover', e => { e.preventDefault(); slot.style.borderColor = 'var(--accent)'; });
+  slot.addEventListener('dragleave', () => slot.style.borderColor = '');
+  slot.addEventListener('drop', e => {
+    e.preventDefault(); slot.style.borderColor = '';
+    if (e.dataTransfer.files[0]) {
+      const dt = new DataTransfer(); dt.items.add(e.dataTransfer.files[0]);
+      fileInput.files = dt.files;
+      fileInput.dispatchEvent(new Event('change'));
+    }
+  });
+});
+</script>
+</body>
+</html>
